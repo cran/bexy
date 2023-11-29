@@ -1,0 +1,9 @@
+exportPattern("^[[:alpha:]]+")
+
+importFrom("graphics", "box", "hist", "legend", "lines", "par", "rect",
+               "segments", "strheight", "text")
+importFrom("utils", "read.table", "write.table")
+
+S3method(print, bexy)
+S3method(summary, bexy)
+S3method(plot, bexy)
