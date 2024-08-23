@@ -1,3 +1,12 @@
+# BeXY v0.1.3 (Release date: 2024-08-23)
+
+Changes:
+
+* Updated bexy constructor to accept output from latest version of the command-line tool.
+* Added functions to generate barplot showing the posterior probabilities of the sex karyotypes.
+* Improved plotCounts() function to work with cases where multiple X- or Y-linked scaffolds exist.
+
+
 # BeXY v0.1.2 (Release date: 2023-11-29)
 
 Changes:

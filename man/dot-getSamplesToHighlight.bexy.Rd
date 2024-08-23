@@ -9,7 +9,7 @@
 \arguments{
 \item{object}{A bexy object.}
 
-\item{sampleNamesToHighlight}{A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.}
+\item{sampleNamesToHighlight}{A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.}
 }
 \value{
 A vector of integers corresponding to indices of samples to highlight

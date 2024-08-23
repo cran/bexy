@@ -4,14 +4,14 @@
 \alias{.openFile.bexy}
 \title{Function to open a file and generate error message if it was not found}
 \usage{
-.openFile.bexy(path, files, pattern)
+.openFile.bexy(path, files, patterns)
 }
 \arguments{
 \item{path}{A file path.}
 
 \item{files}{A vector of character strings corresponding to file names found in the path.}
 
-\item{pattern}{A pattern to search for within 'files'.}
+\item{patterns}{A vector of patterns to search for within 'files'.}
 }
 \value{
 A file connection.

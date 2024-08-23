@@ -2,7 +2,7 @@
 % Please edit documentation in R/bexy.R
 \name{.getIndexScaffoldAutosomalTrisomy.bexy}
 \alias{.getIndexScaffoldAutosomalTrisomy.bexy}
-\title{Function that returns the index of a given scaffold & checks if it is valid}
+\title{Function that returns the index of a given scaffold & checks if it is valid for autosomal trisomy}
 \usage{
 .getIndexScaffoldAutosomalTrisomy.bexy(object, scaffoldName)
 }
@@ -12,9 +12,9 @@
 \item{scaffoldName}{A vector of size one with the name of a scaffold.}
 }
 \value{
-A vector of characters.
+A list containing the index of the scaffold within posterior_mode_z and counts.
 }
 \description{
-Function that returns the index of a given scaffold & checks if it is valid
+Function that returns the index of a given scaffold & checks if it is valid for autosomal trisomy
 }
 \keyword{internal}

@@ -2,27 +2,12 @@
 % Please edit documentation in R/bexy.R
 \name{plot.bexy}
 \alias{plot.bexy}
-\title{Plotting a bexy object}
+\title{Plotting a bexy object. To customize the plots, please call the respective plotting functions directly (e.g. plotTernary, plotCounts, plotBars...).}
 \usage{
-\method{plot}{bexy}(
-  x,
-  colors = c("turquoise3", "darkorange", "royalblue4"),
-  sampleNamesToHighlight = c(),
-  label = TRUE,
-  addSquares = TRUE,
-  ...
-)
+\method{plot}{bexy}(x, ...)
 }
 \arguments{
 \item{x}{A bexy object.}
-
-\item{colors}{A vector of length three with the colors for aneuploid, XX and XY samples, respectively.}
-
-\item{sampleNamesToHighlight}{A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.}
-
-\item{label}{Boolean indicating whether samples should be labeled.}
-
-\item{addSquares}{Boolean indicating whether 7-cell posterior probability square plots should be drawn.}
 
 \item{...}{Other parameters used for plotting.}
 }
@@ -30,7 +15,7 @@
 No return value, called for side effects.
 }
 \description{
-Plotting a bexy object
+Plotting a bexy object. To customize the plots, please call the respective plotting functions directly (e.g. plotTernary, plotCounts, plotBars...).
 }
 \examples{
 bex <- bexy()

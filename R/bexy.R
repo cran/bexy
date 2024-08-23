@@ -14,16 +14,20 @@ library(Ternary)
 #' Function to open a file and generate error message if it was not found
 #' @param path A file path.
 #' @param files A vector of character strings corresponding to file names found in the path.
-#' @param pattern A pattern to search for within 'files'.
+#' @param patterns A vector of patterns to search for within 'files'.
 #' @return A file connection.
 #' @keywords internal
-.openFile.bexy <- function(path, files, pattern){
-  filename <- files[grepl(pattern, files)]
+.openFile.bexy <- function(path, files, patterns){
+  filename <- files
+  for (p in 1:length(patterns)){
+    filename <- filename[grepl(patterns[p], filename)]
+  }
+
   if (length(filename) == 0){
-    stop(paste0("No file containing the pattern '", pattern, "' found in directory '", path, "'!"))
+    stop(paste0("No file containing the pattern '", paste0(patterns, collapse = ","), "' found in directory '", path, "'!"))
   }
   if (length(filename) > 1){
-    stop(paste0("Multiple files containing the pattern '", pattern, "' found in directory '", path, "'!"))
+    stop(paste0("Multiple files containing the pattern '", paste0(patterns, collapse = ","), "' found in directory '", path, "'!"))
   }
   if (file.size(paste0(path, filename)) == 3){ # empty file (happens if z was not inferred)
     return(data.frame())
@@ -76,10 +80,10 @@ library(Ternary)
   return(as.character(uq))
 }
 
-#' Function that returns the index of a given scaffold & checks if it is valid
+#' Function that returns the index of a given scaffold & checks if it is valid for autosomal trisomy
 #' @param object A bexy object.
 #' @param scaffoldName A vector of size one with the name of a scaffold.
-#' @return A vector of characters.
+#' @return A list containing the index of the scaffold within posterior_mode_z and counts.
 #' @keywords internal
 .getIndexScaffoldAutosomalTrisomy.bexy <- function(object, scaffoldName){
   # check if trisomy is allowed
@@ -117,6 +121,46 @@ library(Ternary)
   return(list(ix_z=ix_z, ix_counts=ix_counts))
 }
 
+#' Function that returns the index of a given scaffold
+#' @param object A bexy object.
+#' @param scaffoldName A string representing the name of a scaffold.
+#' @param takeIfNotFound A string ("X-linked" or "Y-linked") that denotes the type of scaffold to use if scaffoldName could not be found
+#' @return A single integer representing the index of the scaffold.
+#' @keywords internal
+.getIndexScaffold.bexy <- function(object, scaffoldName, takeIfNotFound){
+  # check if it is only a single scaffold
+  if (length(scaffoldName) > 1){
+    stop("Please specify only a single scaffold at a time.")
+  }
+  # check if takeIfNotFound is either "X-linked" or "Y-linked"
+  if (!(takeIfNotFound == "X-linked" | takeIfNotFound == "Y-linked")){
+    stop("takeIfNotFound must be either X-linked or Y-linked.")
+  }
+
+  # check if scaffoldName is NULL -> find first scaffold of type 'takeIfNotFound'
+  if (is.null(scaffoldName)){
+    postMode <- getPosteriorModeScaffoldTypes(object)
+    all <- names(postMode[postMode == takeIfNotFound])
+    scaffoldName <- all[1]
+    if (length(all) > 1){
+      warning(paste0("Multiple scaffolds are ", takeIfNotFound, " according to their posterior mode, and only the first one (", scaffoldName, ") will be plotted. Use the argument 'scaffoldX' or 'scaffoldY' to specify other scaffolds for plotting."))
+    }
+    if (is.na(scaffoldName)){
+      # no 'takeIfNotFound' found -> return NULL
+      warning(paste0("No scaffolds are ", takeIfNotFound, " according to their posterior mode. Will use sample index for this axis."))
+      return(NULL)
+    }
+  }
+
+  # get index of match in scaffold names
+  ix <- which(object$scaffoldNames == as.character(scaffoldName))
+  if (length(ix) == 0){
+    stop(paste0("Scaffold '", scaffoldName, "' does not exist."))
+  }
+
+  return(ix)
+}
+
 #' Function that transforms state posteriors of sex karyotype to ternary-format
 #' @param object A bexy object.
 #' @return A matrix with 3 rows: P(aneuploid), P(XX), P(XY).
@@ -127,7 +171,7 @@ library(Ternary)
 
 #' Function to select samples that should be highlighted
 #' @param object A bexy object.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @return A vector of integers corresponding to indices of samples to highlight
 #' @keywords internal
 .getSamplesToHighlight.bexy <- function(object, sampleNamesToHighlight){
@@ -142,7 +186,7 @@ library(Ternary)
 #' Function to select samples that should be highlighted for autosomal trisomy
 #' @param object A bexy object.
 #' @param ix A list containing the index of a specific scaffold within z.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @return A vector of integers corresponding to indices of samples to highlight
 #' @keywords internal
 .getSamplesToHighlightAutosomalTrisomy.bexy <- function(object, ix, sampleNamesToHighlight){
@@ -194,7 +238,7 @@ library(Ternary)
 #' Function to plot a ternary plot of the probabilities for being aneuploid, XX or XY
 #' @param object A bexy object.
 #' @param colors A vector of length three with the colors for aneuploid, XX and XY samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @param label Boolean indicating whether samples should be labeled.
 #' @param ... More parameters passed to TernaryPlot()
 #' @return The upper boundary of the plot.
@@ -322,7 +366,7 @@ library(Ternary)
 #' Function to plot ternary plot with 7-cell plots displaying posterior probabilities of karyotypes
 #' @param object A bexy object.
 #' @param colors A vector of length three with the colors for aneuploid, XX and XY samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @param label Boolean indicating whether samples should be labeled.
 #' @param addSquares Boolean indicating whether 7-cell posterior probability square plots should be drawn.
 #' @param ... Other parameters used for plotting
@@ -379,23 +423,15 @@ library(Ternary)
 
 #' Function to plot X vs Y counts and color them according to BeXY posterior mode
 #' @param object A bexy object.
+#' @param ix_X An integer representing the index of the scaffold to be plotted on the x-axis.
+#' @param ix_Y An integer representing the index of the scaffold to be plotted on the y-axis.
 #' @param colors A vector of length three with the colors for aneuploid, XX and XY samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @param label Boolean indicating whether samples should be labeled.
 #' @param ... Other parameters used for plotting
 #' @return No return value, called for side effects.
 #' @keywords internal
-.plotXVsY.bexy <- function(object, colors, sampleNamesToHighlight, label, ...){
-  # find Y-chromosome, allow only a single hit
-  Y <- which(object$posterior_mode_t == 1)
-  if (length(Y) == 0){ stop("BeXY did not detect any Y-linked scaffolds, can therefore not plot X vs Y!") }
-  if (length(Y) > 1){ stop("BeXY detected multiple Y-linked scaffolds, can therefore not plot X vs Y!") }
-
-  # find X-chromosome, allow only a single hit
-  X <- which(object$posterior_mode_t == 2)
-  if (length(X) == 0){ stop("BeXY did not detect any X-linked scaffolds, can therefore not plot X vs Y!") }
-  if (length(X) > 1){ stop("BeXY detected multiple X-linked scaffolds, can therefore not plot X vs Y!") }
-
+.plotXVsY.bexy <- function(object, ix_X, ix_Y, colors, sampleNamesToHighlight, label, ...){
   # get colors
   posterior_mode <- apply(.getInputTernary.bexy(object), 2, which.max)
   col_per_sample <- colors[posterior_mode]
@@ -408,11 +444,24 @@ library(Ternary)
   n$individual <- NULL
   n$sequencing_type <- NULL
   norm_counts <- sweep(n, 1, rowSums(n), "/")
-  xx <- norm_counts[,X] * 100
-  yy <- norm_counts[,Y] * 100
-  plot(xx, yy, col = col_per_sample, pch = pchs,
-       xlab = "Reads mapped to X (%)",
-       ylab = "Reads mapped to Y (%)")
+  xx <- norm_counts[, ix_X] * 100
+  yy <- norm_counts[, ix_Y] * 100
+
+  # get axis labels
+  getAxLabel <- function(ix){ return(paste0("Reads mapped to ", object$scaffoldNames[ix], " (%, ", getPosteriorModeScaffoldTypes(object)[ix], ")")) }
+  ax_X <- getAxLabel(ix_X)
+  ax_Y <- getAxLabel(ix_Y)
+
+  # check if X or Y is NULL (does not exist) -> in this case, plot sample index on x-axis
+  if (is.null(ix_X) | is.null(ix_Y)){
+    if (is.null(ix_Y)){
+      yy <- xx
+      ax_Y <- ax_X
+    }
+    xx <- 1:length(yy)
+    ax_X <- "Sample index"
+  }
+  plot(xx, yy, col = col_per_sample, pch = pchs, xlab = ax_X, ylab = ax_Y, ...)
   box()
 
   # identify samples to highlight
@@ -460,7 +509,7 @@ library(Ternary)
 #' @param scaffoldName The name of the scaffold to plot (has to be an autosome)
 #' @param plotCounts A boolean. If TRUE, the counts are plotted. If FALSE, the posterior probabilities are plotted.
 #' @param colors A vector of length two with the colors for diploid and triploid samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @param label Boolean indicating whether samples should be labeled.
 #' @param ... Other parameters used for plotting
 #' @return No return value, called for side effects.
@@ -492,7 +541,8 @@ library(Ternary)
     yy <- object$posterior_z[ix$ix_z,] * 100
     plot(yy, col = col_per_sample, pch = pchs,
          xlab = "Sample",
-         ylab = paste0("Posterior probability of trisomy ", scaffoldName, " (%)"))
+         ylab = paste0("Posterior probability of trisomy ", scaffoldName, " (%)"),
+         ...)
   }
 
 
@@ -596,7 +646,7 @@ bexy <- function(path = NULL, readMCMCTrace = FALSE){
   posterior_var <- meanVar[2,]
 
   # read counts
-  counts <- .openFile.bexy(path, files, "_counts_filtered.txt")
+  counts <- .openFile.bexy(path, files, c("counts", "filtered.txt"))
 
   # read MCMC trace (if needed)
   trace <- NULL
@@ -614,7 +664,8 @@ bexy <- function(path = NULL, readMCMCTrace = FALSE){
                  posterior_mean = posterior_mean,
                  posterior_var = posterior_var,
                  counts = counts,
-                 trace = trace)
+                 trace = trace,
+                 scaffoldNames = names(posterior_t))
   class(result) <- "bexy"
 
   return(result)
@@ -883,13 +934,9 @@ getPosteriorMeanRho <- function(object){
 # Methods for plotting
 #-------------------------------------------------------------------------------
 
-#' Plotting a bexy object
+#' Plotting a bexy object. To customize the plots, please call the respective plotting functions directly (e.g. plotTernary, plotCounts, plotBars...).
 #'
 #' @param x A bexy object.
-#' @param colors A vector of length three with the colors for aneuploid, XX and XY samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
-#' @param label Boolean indicating whether samples should be labeled.
-#' @param addSquares Boolean indicating whether 7-cell posterior probability square plots should be drawn.
 #' @param ... Other parameters used for plotting.
 #' @return No return value, called for side effects.
 #' @export
@@ -897,16 +944,17 @@ getPosteriorMeanRho <- function(object){
 #' @examples
 #' bex <- bexy()
 #' plot(bex)
-plot.bexy <- function(x, colors = c("turquoise3", "darkorange", "royalblue4"), sampleNamesToHighlight = c(), label = TRUE, addSquares = TRUE, ...){
-  plotTernary(x, colors, sampleNamesToHighlight, label, addSquares, ...)
-  plotXY(x, colors, sampleNamesToHighlight, label, ...)
+plot.bexy <- function(x, ...){
+  plotTernary(x, ...)
+  plotCounts(x, ...)
+  plotBars(x, ...)
 }
 
 #' Plotting the ternary of a bexy object
 #'
 #' @param x A bexy object.
 #' @param colors A vector of length three with the colors for aneuploid, XX and XY samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @param label Boolean indicating whether samples should be labeled.
 #' @param addSquares Boolean indicating whether 7-cell posterior probability square plots should be drawn.
 #' @param ... Other parameters used for plotting.
@@ -923,11 +971,13 @@ plotTernary <- function(x, colors = c("turquoise3", "darkorange", "royalblue4"),
   .plotTernaryAndTicTacToe.bexy(x, colors, sampleNamesToHighlight, label, addSquares, ...)
 }
 
-#' Plotting the counts of a bexy object, colored by sex karyotype
+#' Plotting the percentage of counts mapping to two scaffolds (by default a Y-linked scaffold against a X-linked scaffold), colored by sex karyotype
 #'
 #' @param x A bexy object.
+#' @param scaffoldX A string with the name of the scaffold to be plotted on the x-axis. If NULL (default), a X-linked scaffold is used.
+#' @param scaffoldY A string with the name of the scaffold to be plotted on the y-axis. If NULL (default), a Y-linked scaffold is used.
 #' @param colors A vector of length three with the colors for aneuploid, XX and XY samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @param label Boolean indicating whether samples should be labeled.
 #' @param ... Other parameters used for plotting.
 #' @return No return value, called for side effects.
@@ -935,12 +985,96 @@ plotTernary <- function(x, colors = c("turquoise3", "darkorange", "royalblue4"),
 #' @seealso \code{\link{bexy}}
 #' @examples
 #' bex <- bexy()
-#' plotXY(bex)
-plotXY <- function(x, colors = c("turquoise3", "darkorange", "royalblue4"), sampleNamesToHighlight = c(), label = TRUE, ...){
+#' plotCounts(bex)
+plotCounts <- function(x, scaffoldX = NULL, scaffoldY = NULL, colors = c("turquoise3", "darkorange", "royalblue4"), sampleNamesToHighlight = c(), label = TRUE, ...){
   if (length(colors) != 3){
     stop("Invalid colors! Should be of length 3 (aneuploid, XX and XY).")
   }
-  .plotXVsY.bexy(x, colors, sampleNamesToHighlight, label, ...)
+
+  # check if scaffoldX and scaffoldY exist
+  ix_X <- .getIndexScaffold.bexy(x, scaffoldX, "X-linked")
+  ix_Y <- .getIndexScaffold.bexy(x, scaffoldY, "Y-linked")
+  if (is.null(ix_X) & is.null(ix_Y)){
+    # neither X- or Y-linked scaffolds are found -> error
+    stop("BeXY did not detect any X- or Y-linked scaffolds and it can thus not plot X vs Y.")
+  }
+
+  .plotXVsY.bexy(x, ix_X, ix_Y, colors, sampleNamesToHighlight, label, ...)
+}
+
+#' Plotting a barplot with the posterior probabilities of each sex karyotype per sample
+#'
+#' @param x A bexy object.
+#' @param colors A vector of length 7 with the colors for XY, XX, X0, XXY, XYY, XXX and XXYY, respectively.
+#' @param maxNumSamplesPerPlot How many samples to place next to each other into one barplot. If there are more samples, multiple barplots will be generated. This is to ensure that the labels are readable.
+#' @param sortByKaryotype If TRUE, the samples (i.e. the bars) are ordered by the posterior mode of the sex karyotype.
+#' @param sampleNames A vector of sample names that represents the order in which the bars are plotted. Overrides any argument given to sortByKaryotype.
+#' @param ... Other parameters used for plotting.
+#' @return No return value, called for side effects.
+#' @export
+#' @seealso \code{\link{bexy}}
+#' @examples
+#' bex <- bexy()
+#' plotBars(bex)
+plotBars <- function(x, colors = c("lightblue", "lightpink", "khaki", "maroon1", "dodgerblue3", "red4", "navy"), maxNumSamplesPerPlot = 100, sortByKaryotype = TRUE, sampleNames = c(), ...){
+  if (length(colors) != 7){
+    stop("Invalid colors! Should be of length 7 (XY, XX, X0, XXY, XYY, XXX and XXYY).")
+  }
+
+  # sort samples by posterior mode karyotype
+  s <- x$posterior_s
+
+  if (length(sampleNames) > 0){ # match sample names
+    matched <- match(sampleNames, names(s))
+    if (any(is.na(matched))){
+      stop("Sample(s) '", paste(sampleNames[which(is.na(matched))], collapse = ", "), "' could not be found!")
+    }
+    s <- s[,matched]
+  } else if (sortByKaryotype){
+    max_s <- apply(s, 2, which.max)
+    sorted_max_s <- sort(max_s, index.return = T)
+    s <- s[,sorted_max_s$ix]
+  }
+
+
+  # split into multiple plots, if necessary
+  numPlots <- ceiling(ncol(s) / maxNumSamplesPerPlot)
+  for (i in 1:numPlots){
+    # get start and end of current plot
+    start <- (i-1) * maxNumSamplesPerPlot + 1
+    end <- min(ncol(s), start + maxNumSamplesPerPlot - 1)
+    m <- s[,start:end]
+
+    x <- barplot(as.matrix(m),
+                 ylab = "Posterior probability",
+                 las = 2,
+                 col = colors,
+                 space = 0,
+                 border = "darkgray",
+                 xaxt = "n",
+                 ...)
+
+    # add sample names (x axis)
+    axis(side = 1,
+         at = x,
+         labels = names(m),
+         tick = F,
+         las = 2,
+         line = -1,
+         cex.axis = 0.5,
+         ...)
+
+    # add legend
+    legend("top",
+           inset=c(0, -0.1),
+           legend = c("XY", "XX", "X0", "XXY", "XYY", "XXX", "XXYY"),
+           fill = colors,
+           border = NA,
+           horiz = T,
+           xpd = T,
+           bty = "n",
+           ...)
+  }
 }
 
 #' Plotting the autosomal trisomies
@@ -948,7 +1082,7 @@ plotXY <- function(x, colors = c("turquoise3", "darkorange", "royalblue4"), samp
 #' @param x A bexy object.
 #' @param scaffoldName The name of the scaffold to plot (has to be an autosome)
 #' @param colors A vector of length two with the colors for diploid and triploid samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @param label Boolean indicating whether samples should be labeled.
 #' @param ... Other parameters used for plotting.
 #' @return No return value, called for side effects.
@@ -967,7 +1101,7 @@ plotAutosomalTrisomy <- function(x, scaffoldName, colors = c("deepskyblue4", "da
 #' @param x A bexy object.
 #' @param scaffoldName The name of the scaffold to plot (has to be an autosome)
 #' @param colors A vector of length two with the colors for diploid and triploid samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @param label Boolean indicating whether samples should be labeled.
 #' @param ... Other parameters used for plotting.
 #' @return No return value, called for side effects.
@@ -995,7 +1129,7 @@ plotAutosomalTrisomyPosteriorProbabilities <- function(x, scaffoldName, colors =
 #' @param x A bexy object.
 #' @param scaffoldName The name of the scaffold to plot (has to be an autosome)
 #' @param colors A vector of length two with the colors for diploid and triploid samples, respectively.
-#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.
+#' @param sampleNamesToHighlight A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.
 #' @param label Boolean indicating whether samples should be labeled.
 #' @param ... Other parameters used for plotting.
 #' @return No return value, called for side effects.

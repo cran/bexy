@@ -20,7 +20,7 @@ plotAutosomalTrisomy(
 
 \item{colors}{A vector of length two with the colors for diploid and triploid samples, respectively.}
 
-\item{sampleNamesToHighlight}{A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilites.}
+\item{sampleNamesToHighlight}{A vector of sample names that should be highlighted. If empty, samples are automatically highlighted based on the posterior probabilities.}
 
 \item{label}{Boolean indicating whether samples should be labeled.}
 
